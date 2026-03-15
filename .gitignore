@@ -3,3 +3,6 @@ main
 *.out
 .DS_Store
 scratch.c
+*.exe
+*.zip
+winlibs/
