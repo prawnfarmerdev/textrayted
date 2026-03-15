@@ -1,0 +1,409 @@
+#+TITLE: Raylib Text Editor — Project Plan
+#+AUTHOR: Project Planner
+#+DATE: 2026-03-15
+#+STARTUP: overview
+#+OPTIONS: toc:3
+
+* Overview
+
+A feature-rich, terminal-inspired text editor built entirely in C using Raylib as
+the rendering and input backend. The editor targets developers who want a fast,
+minimal, and hackable editor without relying on a terminal or GUI toolkit. The
+project is structured in progressive milestones, each building on the last, from
+a bare rendering loop to a fully functional editing environment.
+
+* Goals and Non-Goals
+
+** Goals
+- Render and edit plain text files of arbitrary size
+- Support multiple cursor styles and editing modes (Normal / Insert)
+- Provide syntax highlighting for C and common languages
+- Handle large files efficiently via a gap buffer or rope data structure
+- Support a command palette / mini-buffer for file operations
+- Cross-platform: Linux, macOS, Windows via Raylib
+
+** Non-Goals
+- Built-in terminal emulator
+- Plugin system (future extension, not in scope)
+- Rich-text or WYSIWYG editing
+- Collaboration / networking features
+
+* Architecture Overview
+
+The editor is split into the following top-level layers:
+
+1. *Core Buffer Layer* — owns all text data and mutation primitives
+2. *View / Rendering Layer* — maps buffer state to screen pixels via Raylib
+3. *Input Layer* — translates keyboard and mouse events into editor commands
+4. *Mode Layer* — modal state machine (Normal, Insert, Visual, Command)
+5. *Syntax Layer* — tokenizer and highlighter sitting on top of the buffer
+6. *File I/O Layer* — load, save, and watch files on disk
+7. *Config Layer* — key bindings, color themes, font settings
+8. *UI Chrome Layer* — status bar, line numbers, command bar, tabs
+
+* Milestones
+
+** Milestone 1: Project Scaffolding and Blank Window
+*** Objectives
+- Set up the repository layout and build system
+- Open a Raylib window with a fixed title and background color
+- Establish a main game loop with a clear update / draw separation
+- Confirm the project compiles cleanly on all target platforms
+
+*** Tasks
+- Choose and configure a build system (CMake or a hand-written Makefile)
+- Add Raylib as a submodule or vendored static library
+- Write a minimal ~main.c~ that opens a window, clears the background, and closes on ESC
+- Define a top-level ~Editor~ struct that will grow across milestones
+- Set up ~.gitignore~, ~README~, and directory skeleton
+- Add a CI script (optional) for compile checks
+
+*** Deliverable
+A blank Raylib window that opens, runs at 60 fps, and exits cleanly.
+
+** Milestone 2: Font Loading and Text Rendering
+*** Objectives
+- Load a monospace TTF / OTF font at a configurable point size
+- Render a static block of text to the screen
+- Establish the character cell grid model (column × row coordinates)
+- Measure glyph advance width and line height for layout math
+
+*** Tasks
+- Select a default bundled font (e.g., JetBrains Mono or Inconsolata)
+- Implement ~font_load~ and ~font_unload~ helpers
+- Compute and store ~glyph_width~ and ~line_height~ from the loaded font metrics
+- Write a ~draw_text_line~ function that renders a single line at a given (col, row)
+- Render a hard-coded multi-line string to verify alignment
+
+*** Deliverable
+Static multi-line text displayed on screen in a monospace font with correct spacing.
+
+** Milestone 3: Core Buffer — Gap Buffer Implementation
+*** Objectives
+- Implement a gap buffer as the primary text storage structure
+- Support insert, delete, and cursor movement in O(1) amortized time
+- Pass a suite of unit tests covering edge cases
+
+*** Tasks
+- Define the ~GapBuffer~ struct: ~char *data~, ~size_t gap_start~, ~gap_end~, ~capacity~
+- Implement ~gb_create~, ~gb_destroy~, ~gb_insert_char~, ~gb_delete_char~
+- Implement ~gb_move_cursor~, ~gb_move_gap_to~, ~gb_grow~ (realloc with gap reset)
+- Implement helper: ~gb_char_at(index)~, ~gb_length()~, ~gb_to_string()~
+- Write a standalone test runner (~test_buffer.c~) covering: empty insert, delete-at-start,
+  delete-at-end, grow across boundary, unicode-safe byte counting
+
+*** Deliverable
+A fully tested gap buffer library that can be used as the backbone of the editor.
+
+** Milestone 4: Buffer-to-Screen Rendering
+*** Objectives
+- Connect the gap buffer to the Raylib render loop
+- Display the live buffer contents as a grid of glyphs
+- Render a blinking cursor at the gap position
+
+*** Tasks
+- Write ~buffer_render(GapBuffer *gb, Font font, Vector2 origin)~
+- Iterate buffer bytes, handle ~\n~ as a line break, advance row/col counters
+- Skip rendering for bytes inside the gap
+- Draw a filled rectangle for the cursor cell, rendered on top of the glyph
+- Implement cursor blink via a timer accumulator in the update loop
+
+*** Deliverable
+A live view of the gap buffer rendered on screen with a blinking cursor.
+
+** Milestone 5: Keyboard Input and Basic Editing
+*** Objectives
+- Handle printable character insertion
+- Handle Backspace (delete-before-cursor) and Delete (delete-after-cursor)
+- Handle arrow keys to move the cursor
+- Handle Enter to insert a newline
+
+*** Tasks
+- Poll ~GetCharPressed()~ each frame for printable input; feed into ~gb_insert_char~
+- Poll ~IsKeyPressed~ / ~IsKeyPressedRepeat~ for Backspace, Delete, arrow keys, Enter
+- Implement key-repeat with a configurable initial delay and repeat interval
+- Map Left/Right arrows to cursor column movement
+- Map Up/Down arrows to cursor line movement (requires line-index helper)
+- Test with typing, deletion, and navigation in the live window
+
+*** Deliverable
+A functional (if minimal) text input widget driven by the gap buffer.
+
+** Milestone 6: Scrolling and Viewport
+*** Objectives
+- Support files taller than the screen
+- Implement smooth vertical scrolling and horizontal scrolling for long lines
+- Keep the cursor visible (scroll-follow behavior)
+
+*** Tasks
+- Define ~Viewport~ struct: ~top_line~, ~left_col~, ~visible_rows~, ~visible_cols~
+- Render only the lines within the viewport window
+- On cursor move, check if cursor left the viewport; if so, scroll to follow
+- Implement Page Up / Page Down: move viewport by ~visible_rows~
+- Add mouse wheel support via ~GetMouseWheelMove()~
+
+*** Deliverable
+The editor scrolls correctly for content larger than the window.
+
+** Milestone 7: Line Numbers
+*** Objectives
+- Render a left-side gutter with line numbers
+- Offset the text area to the right of the gutter
+- Dim line-number color relative to the text color
+
+*** Tasks
+- Compute gutter width from the number of digits in the line count
+- Render line numbers in a muted color aligned right within the gutter
+- Offset ~origin.x~ of the text area by ~gutter_width + gutter_padding~
+- Highlight the current line number in the active color
+
+*** Deliverable
+A styled gutter with line numbers that updates as the cursor moves.
+
+** Milestone 8: Modal Editing (Normal / Insert Mode)
+*** Objectives
+- Implement a modal state machine with Normal and Insert modes
+- Map Vim-inspired keybindings in Normal mode (h, j, k, l, i, a, o, O, x, dd, etc.)
+- Enter Insert mode on ~i~ / ~a~ / ~o~; return to Normal on ESC
+
+*** Tasks
+- Define ~EditorMode~ enum: ~MODE_NORMAL~, ~MODE_INSERT~
+- Dispatch input through ~handle_normal_mode_input~ or ~handle_insert_mode_input~
+- Implement basic Normal-mode motions: h/j/k/l, w/b, 0/$, gg/G
+- Implement Normal-mode operators: x (delete char), dd (delete line), yy (yank line), p (paste)
+- Display current mode in the status bar
+- Show a block cursor in Normal mode, a thin bar cursor in Insert mode
+
+*** Deliverable
+Modal editing with working Normal and Insert modes.
+
+** Milestone 9: File I/O — Open and Save
+*** Objectives
+- Accept a file path as a CLI argument and load its contents into the buffer
+- Save the buffer back to disk with Ctrl+S
+- Handle missing files, read errors, and write errors gracefully
+
+*** Tasks
+- Parse ~argv[1]~ in ~main~; if present, load into the gap buffer
+- Implement ~file_load(const char *path, GapBuffer *gb)~
+- Implement ~file_save(const char *path, GapBuffer *gb)~ via ~gb_to_string~ + ~fwrite~
+- Display a transient status message on save ("Saved." / "Error saving.")
+- Handle the case where no file argument is given (start with an empty buffer)
+
+*** Deliverable
+The editor loads, edits, and saves real files.
+
+** Milestone 10: Status Bar and Command Bar
+*** Objectives
+- Render a status bar at the bottom showing: mode, file name, cursor position, modified flag
+- Implement a command bar (mini-buffer) triggered by ~:~ in Normal mode
+- Parse and execute basic commands: ~:w~, ~:q~, ~:wq~, ~:e <file>~, ~:set~
+
+*** Tasks
+- Reserve the bottom 1–2 rows of the screen for status / command bar
+- Render status bar fields left-aligned (mode, filename) and right-aligned (line:col, %)
+- On ~:~ keypress, switch to ~MODE_COMMAND~ and render a text input in the command bar
+- Implement a simple command parser and dispatcher
+- Return to Normal mode on Enter (execute) or ESC (cancel)
+
+*** Deliverable
+A status bar and working command-line interface at the bottom of the screen.
+
+** Milestone 11: Syntax Highlighting
+*** Objectives
+- Tokenize C source files into categories: keywords, types, strings, comments, numbers, operators
+- Render each token category in a distinct color
+- Re-tokenize incrementally on edit (dirty-line tracking)
+
+*** Tasks
+- Define a ~Token~ struct: ~start~, ~length~, ~TokenType~
+- Implement a line-based lexer for C (~tokenize_c_line~)
+- Store a per-line token array, invalidated on edit
+- In the render pass, look up token color for each character before drawing
+- Add a language-detection heuristic based on file extension
+- Define a color theme struct mapping ~TokenType~ → ~Color~
+
+*** Deliverable
+C source files render with full syntax highlighting.
+
+** Milestone 12: Search and Replace
+*** Objectives
+- Implement forward (~/ pattern~) and backward (~? pattern~) search
+- Highlight all matches in the visible area
+- Implement ~n~ / ~N~ to cycle through matches
+- Implement a basic ~:s/pattern/replacement/g~ substitution command
+
+*** Tasks
+- Implement ~search_find_next(GapBuffer *gb, const char *pattern, size_t from)~
+- Store a list of match positions for the current pattern
+- Highlight match ranges during the render pass (background color overlay)
+- Wire ~/~ and ~?~ in Normal mode to open search input in the command bar
+- Implement ~:s~ parser and substitution loop in the command dispatcher
+
+*** Deliverable
+In-buffer search with match highlighting and basic substitution.
+
+** Milestone 13: Multiple Buffers and Tabs
+*** Objectives
+- Support opening multiple files simultaneously in separate buffers
+- Display a tab bar showing open buffer names
+- Switch between buffers with keyboard shortcuts
+
+*** Tasks
+- Define a ~BufferList~ (array of ~Buffer~ pointers, active index)
+- Implement ~:e <file>~ to open a new buffer without closing the current one
+- Render a tab bar at the top; highlight the active tab
+- Map ~:bn~ / ~:bp~ (next/previous buffer) and tab-click with mouse
+- Implement ~:bd~ (buffer delete / close) with unsaved-change warning
+
+*** Deliverable
+Multiple files open simultaneously with a tab bar for navigation.
+
+** Milestone 14: Mouse Support
+*** Objectives
+- Click to reposition the cursor
+- Click-drag to select text (Visual mode)
+- Mouse wheel scrolls the viewport
+
+*** Tasks
+- On ~MOUSE_BUTTON_LEFT~ press, convert screen pixel to (line, col), move cursor there
+- Track drag start; while held, extend a visual selection region
+- Highlight selected region during render pass
+- Implement yank-selection (~y~) and delete-selection (~d~) for visual selections
+- Mouse wheel already handled in Milestone 6; integrate with this system
+
+*** Deliverable
+Full mouse navigation and text selection.
+
+** Milestone 15: Configuration and Theming
+*** Objectives
+- Load a plain-text config file (~.editorrc~ or ~config.ini~) at startup
+- Support configuring: font path, font size, tab width, color theme, key bindings
+- Bundle at least two themes (dark and light)
+
+*** Tasks
+- Write a minimal key=value config parser
+- Define a ~Config~ struct read at startup and consulted by all subsystems
+- Implement a ~Theme~ struct with named color slots loaded from config
+- Allow key binding overrides via config (map action names to key combos)
+- Fall back to compiled-in defaults if no config file is found
+
+*** Deliverable
+A user-configurable editor with swappable color themes.
+
+* Data Structures
+
+| Structure       | Purpose                                      | File              |
+|-----------------+----------------------------------------------+-------------------|
+| ~GapBuffer~     | Primary text storage                         | ~buffer.h~        |
+| ~Buffer~        | GapBuffer + metadata (path, dirty flag, etc) | ~buffer.h~        |
+| ~Viewport~      | Scroll position + visible dimensions         | ~viewport.h~      |
+| ~EditorMode~    | Enum for modal state machine                 | ~editor.h~        |
+| ~Token~         | Syntax token (start, length, type)           | ~highlight.h~     |
+| ~Theme~         | Color slots for all UI elements              | ~theme.h~         |
+| ~Config~        | All runtime configuration                    | ~config.h~        |
+| ~BufferList~    | Array of open buffers + active index         | ~editor.h~        |
+| ~Editor~        | Root struct owning all subsystems            | ~editor.h~        |
+
+* File and Directory Layout
+
+#+BEGIN_EXAMPLE
+text-editor/
+├── CMakeLists.txt          # or Makefile
+├── README.org
+├── config.ini.example
+├── assets/
+│   └── fonts/
+│       └── JetBrainsMono-Regular.ttf
+├── src/
+│   ├── main.c
+│   ├── editor.c / editor.h
+│   ├── buffer.c / buffer.h
+│   ├── viewport.c / viewport.h
+│   ├── render.c / render.h
+│   ├── input.c / input.h
+│   ├── modes.c / modes.h
+│   ├── highlight.c / highlight.h
+│   ├── file_io.c / file_io.h
+│   ├── search.c / search.h
+│   ├── command.c / command.h
+│   ├── config.c / config.h
+│   └── theme.c / theme.h
+├── tests/
+│   ├── test_runner.c
+│   ├── test_buffer.c
+│   ├── test_highlight.c
+│   └── test_search.c
+└── third_party/
+    └── raylib/             # vendored or as git submodule
+#+END_EXAMPLE
+
+* Key Bindings Reference (Default)
+
+** Normal Mode
+
+| Key      | Action                        |
+|----------+-------------------------------|
+| h / l    | Move cursor left / right      |
+| j / k    | Move cursor down / up         |
+| w / b    | Word forward / backward       |
+| 0 / $    | Start / end of line           |
+| gg / G   | Top / bottom of file          |
+| i        | Enter Insert mode (before)    |
+| a        | Enter Insert mode (after)     |
+| o / O    | New line below / above        |
+| x        | Delete character under cursor |
+| dd       | Delete current line           |
+| yy       | Yank (copy) current line      |
+| p        | Paste after cursor            |
+| /        | Forward search                |
+| ?        | Backward search               |
+| n / N    | Next / previous match         |
+| :        | Enter Command mode            |
+| Ctrl+S   | Save file                     |
+| ESC      | Return to Normal mode         |
+
+** Command Mode
+
+| Command            | Action                     |
+|--------------------+----------------------------|
+| :w                 | Write (save) file          |
+| :q                 | Quit (fails if unsaved)    |
+| :wq                | Save and quit              |
+| :q!                | Force quit without saving  |
+| :e <path>          | Open file in new buffer    |
+| :bn / :bp          | Next / previous buffer     |
+| :bd                | Close current buffer       |
+| :s/pat/rep/g       | Substitute in current line |
+| :%s/pat/rep/g      | Substitute in whole file   |
+
+* Risks and Mitigations
+
+| Risk                                      | Likelihood | Mitigation                                                    |
+|-------------------------------------------+------------+---------------------------------------------------------------|
+| Unicode / multibyte handling complexity   | High       | Use UTF-8 byte arrays; treat codepoints as multi-byte units  |
+| Gap buffer corruption on edge cases       | Medium     | Comprehensive unit tests from Milestone 3 onward             |
+| Performance on very large files (>10 MB)  | Medium     | Lazy line-index cache; only re-index dirty regions           |
+| Font rendering differences across OS      | Low        | Bundle the font; test on all three platforms in CI           |
+| Scope creep beyond defined milestones     | High       | Treat each milestone as a shippable increment; defer extras  |
+
+* Success Criteria
+
+- [ ] Opens, edits, and saves arbitrary plain-text files without data loss
+- [ ] Handles files up to 10 MB without frame-rate drops below 30 fps
+- [ ] Modal editing (Normal / Insert) behaves consistently with documented bindings
+- [ ] Syntax highlighting correctly tokenizes at least C source files
+- [ ] Search finds all matches and highlights them in the viewport
+- [ ] Config file is loaded at startup and changes are reflected at runtime
+- [ ] Builds from source with a single command on Linux, macOS, and Windows
+
+* Future Work (Out of Scope for v1)
+
+- LSP (Language Server Protocol) integration for autocomplete and diagnostics
+- Split-pane / window tiling
+- Macro recording and playback
+- Plugin system (Lua scripting)
+- Git diff gutter integration
+- Built-in file tree / explorer panel
+- Undo/redo history (requires moving from gap buffer to a persistent data structure)
+#+END_PARAMETER>
