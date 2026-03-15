@@ -29,7 +29,7 @@ The editor currently uses:
 
 ** What's next
 
-The plan is to keep adding features like file saving, syntax highlighting, and vim‑like modal editing. Check the git history for the original project plan.
+The plan is to keep adding features like file saving, syntax highlighting, and vim‑like modal editing.
 
 ** Build and run
 
