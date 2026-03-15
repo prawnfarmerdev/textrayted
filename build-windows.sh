@@ -19,6 +19,6 @@ x86_64-w64-mingw32-gcc -Wall -O2 -std=c11 -mwindows \
   -lraylib -lwinmm -lgdi32 -lshell32 -lopengl32
 
 echo "Creating distribution zip..."
-zip -r textrayted-windows.zip textrayted.exe README-windows.txt 2>/dev/null || true
+zip -r textrayted-windows.zip textrayted.exe 2>/dev/null || true
 
 echo "Done: textrayted.exe (standalone) and textrayted-windows.zip"

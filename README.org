@@ -69,7 +69,7 @@ x86_64-w64-mingw32-gcc -Wall -O2 -std=c11 -mwindows \
   -lraylib -lwinmm -lgdi32 -lshell32 -lopengl32
 #+END_SRC
 
-The resulting `textrayted.exe` is in the current directory. A zip with README is also created.
+The resulting `textrayted.exe` is in the current directory. A zip containing the executable is also created.
 
 ** Releases
 
