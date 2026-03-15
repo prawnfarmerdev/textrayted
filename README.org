@@ -8,24 +8,29 @@ This is a minimal text editor built with Raylib. It's still early but already le
 
 ** What works right now
 
-- Opens a window and renders text line by line with a monospace font
+- Opens a window titled "Textrayted" and renders text line by line with a monospace font
 - You can type printable characters (ASCII 32-125)
-- Press Enter for new lines, Tab inserts 4 spaces
+- Arrow key navigation: left/right move character by character, up/down move line‑by‑line with column memory
+- Press Enter for new lines, Tab inserts 4 spaces (both support key repeat)
 - Backspace deletes with repeat when you hold it down (configurable delay/repeat)
 - Cursor tracks position in buffer and blinks on screen
 - Status bar shows line number, column, and character count
-- Basic cursor movement via typing (cursor follows insertion point)
+- Efficient text insertion using memmove for proper buffer shifting
 - Line-by-line text rendering handles newlines correctly
 - Simple buffer implemented as a character array with cursor position tracking
 
 ** Technical details
 
 The editor currently uses:
-- A fixed-size character buffer (999999 chars max)
+- A fixed-size character buffer (999999 chars max) named `content`
 - Cursor struct tracking absolute position, line, and column
-- Frame‑based input polling with Raylib’s GetCharPressed() and IsKeyPressed()
-- Backspace repeat implemented with timers for initial delay and repeat interval
-- Text rendering via MeasureText() for cursor placement and line‑by‑line DrawText()
+- `InsertText()` function that shifts buffer with `memmove` for efficient insertion
+- Arrow‑key navigation with line‑aware movement and column memory
+- Frame‑based input polling with Raylib’s `GetCharPressed()`, `IsKeyPressed()`, and `IsKeyPressedRepeat()`
+- Backspace repeat implemented with timers for initial delay and repeat interval, using `memmove` for proper character deletion
+- Text rendering via `MeasureText()` for cursor placement and line‑by‑line `DrawText()`
+- Clang‑format configuration for code style (no column limit, custom formatting rules)
+- Build system via simple Makefile
 
 ** What's next
 

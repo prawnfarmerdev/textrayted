@@ -70,8 +70,8 @@ AlignOperands:   Align
 AlignTrailingComments:
   Kind:            Always
   OverEmptyLines:  0
-AllowAllArgumentsOnNextLine: true
-AllowAllParametersOfDeclarationOnNextLine: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseExpressionOnASingleLine: true
@@ -92,7 +92,7 @@ AttributeMacros:
   - absl_nullability_unknown
 BinPackArguments: true
 BinPackLongBracedList: true
-BinPackParameters: BinPack
+BinPackParameters: true
 BitFieldColonSpacing: Both
 BracedInitializerIndentWidth: -1
 BraceWrapping:
@@ -131,7 +131,7 @@ BreakFunctionDefinitionParameters: false
 BreakInheritanceList: BeforeColon
 BreakStringLiterals: true
 BreakTemplateDeclarations: Yes
-ColumnLimit:     80
+ColumnLimit:     0
 CommentPragmas:  '^ IWYU pragma:'
 CompactNamespaces: false
 ConstructorInitializerIndentWidth: 4
