@@ -1,27 +1,51 @@
-# textrayted – a text editor in C with raylib
+#+TITLE: textrayted – a text editor in C with raylib
+#+AUTHOR: prawnfarmerdev
+#+DATE: 2026-03-15
+#+OPTIONS: toc:nil
+
+* textrayted – a text editor in C with raylib
 
 This is a minimal text editor built with Raylib. It's still early but already lets you type, delete, and navigate through text with a cursor.
 
-## What works right now
+** What works right now
 
-- Opens a window and renders text line by line
-- You can type characters, press Enter for new lines, Tab for spaces
-- Backspace deletes with repeat when you hold it down
-- Cursor moves as you type and blinks on screen
+- Opens a window and renders text line by line with a monospace font
+- You can type printable characters (ASCII 32-125)
+- Press Enter for new lines, Tab inserts 4 spaces
+- Backspace deletes with repeat when you hold it down (configurable delay/repeat)
+- Cursor tracks position in buffer and blinks on screen
 - Status bar shows line number, column, and character count
+- Basic cursor movement via typing (cursor follows insertion point)
+- Line-by-line text rendering handles newlines correctly
+- Simple buffer implemented as a character array with cursor position tracking
 
-## What's next
+** Technical details
 
-The plan is to keep adding features like file saving, syntax highlighting, and vim-like modal editing. Check the git history for the original project plan.
+The editor currently uses:
+- A fixed-size character buffer (999999 chars max)
+- Cursor struct tracking absolute position, line, and column
+- Frame‑based input polling with Raylib’s GetCharPressed() and IsKeyPressed()
+- Backspace repeat implemented with timers for initial delay and repeat interval
+- Text rendering via MeasureText() for cursor placement and line‑by‑line DrawText()
 
-## Build and run
+** What's next
+
+The plan is to keep adding features like file saving, syntax highlighting, and vim‑like modal editing. Check the git history for the original project plan.
+
+** Build and run
 
 You need Raylib installed. Then:
 
+#+BEGIN_SRC sh
 make run
+#+END_SRC
 
-Or compile manually: gcc -Wall -g -std=c11 -o main main.c -lraylib -lm -ldl -lpthread
+Or compile manually:
 
-## License
+#+BEGIN_SRC sh
+gcc -Wall -g -std=c11 -o main main.c -lraylib -lm -ldl -lpthread
+#+END_SRC
+
+** License
 
 MIT
