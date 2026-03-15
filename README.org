@@ -3,7 +3,6 @@
 #+DATE: 2026-03-15
 #+OPTIONS: toc:nil
 
-* textrayted – a text editor in C with raylib
 
 This is a minimal text editor built with Raylib. It's still early but already lets you type, delete, and navigate through text with a cursor.
 
