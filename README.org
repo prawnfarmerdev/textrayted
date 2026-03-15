@@ -71,6 +71,12 @@ x86_64-w64-mingw32-gcc -Wall -O2 -std=c11 -mwindows \
 
 The resulting `textrayted.exe` is in the current directory. A zip with README is also created.
 
+** Releases
+
+Pre‑built Windows binaries are available on [[https://github.com/prawnfarmerdev/textrayted/releases][GitHub Releases]].
+
+Current release: [[https://github.com/prawnfarmerdev/textrayted/releases/tag/v0.1.0][v0.1.0]] – first Windows release with arrow key navigation.
+
 ** License
 
 MIT
