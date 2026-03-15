@@ -57,23 +57,23 @@ bool IsAnyKeyPressed()
   return false;
 }
 
-void HandleCharInput(char* name, Cursor* cursor)
+void HandleCharInput(char* content, Cursor* cursor)
 {
   int key = GetCharPressed();
   while (key > 0)
   {
     if ((key >= 32) && (key <= 125) && (cursor->pos < MAX_INPUT_CHARS))
     {
-      name[cursor->pos] = (char)key;
-      name[cursor->pos + 1] = '\0';
+      content[cursor->pos] = (char)key;
+      content[cursor->pos + 1] = '\0';
       (cursor->pos)++;
     }
     key = GetCharPressed();
   }
   if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER))
   {
-    name[cursor->pos] = '\n';
-    name[cursor->pos + 1] = '\0';
+    content[cursor->pos] = '\n';
+    content[cursor->pos + 1] = '\0';
     (cursor->pos)++;
   }
   if (IsKeyPressed(KEY_TAB))
@@ -82,16 +82,16 @@ void HandleCharInput(char* name, Cursor* cursor)
     {
       for (int i = 0; i < 4; i++)
       {
-        name[cursor->pos] = ' ';
+        content[cursor->pos] = ' ';
         (cursor->pos)++;
       }
-      name[cursor->pos] = '\0';
+      content[cursor->pos] = '\0';
     }
   }
-  UpdateCursor(cursor, name);
+  UpdateCursor(cursor, content);
 }
 
-void HandleBackspace(char* name, Cursor* cursor, float* backspaceHoldTimer,
+void HandleBackspace(char* content, Cursor* cursor, float* backspaceHoldTimer,
                      float* lastDeleteTime, float holdDelay, float holdRepeat)
 {
   if (IsKeyDown(KEY_BACKSPACE))
@@ -112,7 +112,7 @@ void HandleBackspace(char* name, Cursor* cursor, float* backspaceHoldTimer,
     if (shouldDelete && cursor->pos > 0)
     {
       (cursor->pos)--;
-      name[cursor->pos] = '\0';
+      content[cursor->pos] = '\0';
     }
   }
   else
@@ -120,10 +120,10 @@ void HandleBackspace(char* name, Cursor* cursor, float* backspaceHoldTimer,
     *backspaceHoldTimer = 0.0f;
     *lastDeleteTime = 0.0f;
   }
-  UpdateCursor(cursor, name);
+  UpdateCursor(cursor, content);
 }
 
-void DrawEditor(Rectangle textBox, char* name, Cursor cursor, int framesCounter)
+void DrawEditor(Rectangle textBox, char* content, Cursor cursor, int framesCounter)
 {
   BeginDrawing();
 
@@ -136,15 +136,15 @@ void DrawEditor(Rectangle textBox, char* name, Cursor cursor, int framesCounter)
   {
     int lineNum = 0;
     int lineStart = 0;
-    int len = (int)strlen(name);
+    int len = (int)strlen(content);
     char lineBuf[MAX_INPUT_CHARS + 1];
 
     for (int i = 0; i <= len; i++)
     {
-      if (name[i] == '\n' || name[i] == '\0')
+      if (content[i] == '\n' || content[i] == '\0')
       {
         int lineLen = i - lineStart;
-        memcpy(lineBuf, name + lineStart, lineLen);
+        memcpy(lineBuf, content + lineStart, lineLen);
         lineBuf[lineLen] = '\0';
         DrawText(lineBuf, (int)textBox.x + 5,
                  (int)textBox.y + 8 + lineNum * LINE_HEIGHT, FONT_SIZE,
@@ -163,9 +163,9 @@ void DrawEditor(Rectangle textBox, char* name, Cursor cursor, int framesCounter)
   // blinking cursor
   if (((framesCounter / 20) % 2) == 0)
   {
-    int lineStart = GetLineStart(name, cursor.line);
+    int lineStart = GetLineStart(content, cursor.line);
     char lineText[MAX_INPUT_CHARS + 1];
-    memcpy(lineText, name + lineStart, cursor.col);
+    memcpy(lineText, content + lineStart, cursor.col);
     lineText[cursor.col] = '\0';
 
     int cursorX = (int)textBox.x + 5 + MeasureText(lineText, FONT_SIZE);
@@ -183,7 +183,7 @@ int main(void)
   const int screenHeight = INITSCREENHEIGHT;
   InitWindow(screenWidth, screenHeight, "Texrayted");
 
-  char name[MAX_INPUT_CHARS + 1] = "\0";
+  char content[MAX_INPUT_CHARS + 1] = "\0";
   Cursor cursor = {0, 0, 0};
   Rectangle textBox = {0, 0, screenWidth, screenHeight};
   int framesCounter = 0;
@@ -196,11 +196,11 @@ int main(void)
 
   while (!WindowShouldClose())
   {
-    HandleCharInput(name, &cursor);
-    HandleBackspace(name, &cursor, &backspaceHoldTimer, &lastDeleteTime,
+    HandleCharInput(content, &cursor);
+    HandleBackspace(content, &cursor, &backspaceHoldTimer, &lastDeleteTime,
                     holdDelay, holdRepeat);
     framesCounter++;
-    DrawEditor(textBox, name, cursor, framesCounter);
+    DrawEditor(textBox, content, cursor, framesCounter);
   }
 
   CloseWindow();
