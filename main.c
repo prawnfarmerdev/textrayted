@@ -80,7 +80,7 @@ void HandleCharInput(char* content, Cursor* cursor)
   int key = GetCharPressed();
   while (key > 0)
   {
-    if ((key >= 32) && (key <= 125) && (cursor->pos < MAX_INPUT_CHARS))
+    if ((key >= 32) && (key <= 348) && (cursor->pos < MAX_INPUT_CHARS))
     {
       char ch = (char)key;
       InsertText(content, cursor, &ch, 1);
