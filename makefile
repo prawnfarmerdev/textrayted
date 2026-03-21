@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g -std=c11
+CFLAGS = -Wall -g 
 TARGET = main
 SOURCES = main.c
 LIBS = -lraylib -lm -ldl -lpthread
