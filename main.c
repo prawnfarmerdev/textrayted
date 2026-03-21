@@ -68,14 +68,14 @@ void gb_free(GapBuffer* gb)
         free(gb);
 }
 
-int gb_gap_size(GapBuffer* gb)
+int gb_get_gap_size(GapBuffer* gb)
 {
         return gb->gap_end - gb->gap_start;
 }
 
 int gb_length(GapBuffer* gb)
 {
-        return gb->size - gb_gap_size(gb);
+        return gb->size - gb_get_gap_size(gb);
 }
 
 char gb_get_char_at(GapBuffer* gb, int pos)
@@ -100,7 +100,7 @@ void gb_get_text(GapBuffer* gb, char* out)
 void gb_grow(GapBuffer* gb) { /* TODO: allocate bigger buf, copy before and after gap, update gap_end and size */ }
 
 void gb_move_gap(GapBuffer* gb)
-{ /* TODO: slide chars left or right to move gap to cursor.pos */
+{
         int pos = gb->cursor.pos;
         if (pos == gb->gap_start) return;
 
@@ -120,7 +120,27 @@ void gb_move_gap(GapBuffer* gb)
         }
 }
 void gb_update_cursor_linecol(GapBuffer* gb) { /* TODO: walk from 0 to cursor.pos counting newlines for line, chars for col */ }
-void gb_insert_char(GapBuffer* gb, char c) { /* TODO: grow if needed, move gap, write char, advance gap_start and cursor */ }
+void gb_insert_char(GapBuffer* gb, char c)
+{
+  /* TODO: grow if needed, move gap, write char, advance gap_start and cursor */
+  if(gb_get_gap_size(gb)==0)
+    {
+      gb_grow(gb);
+    }
+
+  gb_move_gap(gb);
+  gb->buffer[gb->gap_start] = c;
+  gb->gap_start++;
+  gb->cursor.pos++;
+
+    if (c == '\n')
+    {
+        gb->cursor.line++;
+        gb->cursor.col = 0;
+    }
+    else gb->cursor.col++;
+
+}
 void gb_insert_string(GapBuffer* gb, const char* s, int n) { /* TODO: call gb_insert_char for each character */ }
 void gb_delete_before(GapBuffer* gb) { /* TODO: move gap, retreat gap_start, decrement cursor.pos, update linecol */ }
 void gb_delete_after(GapBuffer* gb) { /* TODO: move gap, advance gap_end, update linecol */ }
