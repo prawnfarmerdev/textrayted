@@ -12,9 +12,9 @@
 #define FONT_SIZE 40
 #define LINE_HEIGHT 48
 #define TAB_WIDTH 4
-#define INIT_GAP_SIZE 64
+#define INIT_GAP_SIZE 128
 #define MAX_CHARS 4096
-#define GAP_GROW_SIZE 32
+#define GAP_GROW_SIZE 64
 
 // ============================================================
 // TYPES
@@ -73,15 +73,13 @@ int gb_get_gap_size(GapBuffer* gb)
         return gb->gap_end - gb->gap_start;
 }
 
-int gb_length(GapBuffer* gb)
+int gb_get_length(GapBuffer* gb)
 {
         return gb->size - gb_get_gap_size(gb);
 }
 
 char gb_get_char_at(GapBuffer* gb, int pos)
 {
-        // if pos is before the gap read directly
-        // if pos is after the gap offset by gap size to skip over it
         if (pos < gb->gap_start)
                 return gb->buffer[pos];
         return gb->buffer[gb->gap_end + (pos - gb->gap_start)];
@@ -89,7 +87,6 @@ char gb_get_char_at(GapBuffer* gb, int pos)
 
 void gb_get_text(GapBuffer* gb, char* out)
 {
-        // copy everything before the gap then everything after into a flat string
         int before = gb->gap_start;
         int after = gb->size - gb->gap_end;
         memcpy(out, gb->buffer, before);
@@ -97,7 +94,23 @@ void gb_get_text(GapBuffer* gb, char* out)
         out[before + after] = '\0';
 }
 
-void gb_grow(GapBuffer* gb) { /* TODO: allocate bigger buf, copy before and after gap, update gap_end and size */ }
+void gb_grow(GapBuffer* gb)
+{
+        int new_size = gb->size + GAP_GROW_SIZE;
+        char* new_buffer = (char*)realloc(gb->buffer, new_size);
+        if (!new_buffer) return;
+
+        gb->buffer = new_buffer;
+
+        // Shift the right side of the text to the end of the new, larger buffer
+        int after_size = gb->size - gb->gap_end;
+        int new_gap_end = new_size - after_size;
+
+        memmove(gb->buffer + new_gap_end, gb->buffer + gb->gap_end, after_size);
+
+        gb->gap_end = new_gap_end;
+        gb->size = new_size;
+}
 
 void gb_move_gap(GapBuffer* gb)
 {
@@ -109,81 +122,189 @@ void gb_move_gap(GapBuffer* gb)
                 int distance_to_gap = gb->gap_start - pos;
                 gb->gap_end -= distance_to_gap;
                 gb->gap_start -= distance_to_gap;
-                memcpy(gb->buffer + gb->gap_end, gb->buffer + gb->gap_start, distance_to_gap);
+                // memcpy(gb->buffer + gb->gap_end, gb->buffer + gb->gap_start, distance_to_gap);
+                memmove(gb->buffer + gb->gap_end, gb->buffer + gb->gap_start, distance_to_gap);
         }
         else
         {
-                int distance_to_gap =  pos - gb->gap_start;
-                memcpy( gb->buffer + gb->gap_start, gb->buffer + gb->gap_end , distance_to_gap);
+                int distance_to_gap = pos - gb->gap_start;
+                // memcpy(gb->buffer + gb->gap_start, gb->buffer + gb->gap_end, distance_to_gap);
+                memmove(gb->buffer + gb->gap_start, gb->buffer + gb->gap_end, distance_to_gap);
                 gb->gap_end += distance_to_gap;
                 gb->gap_start += distance_to_gap;
         }
 }
-void gb_update_cursor_linecol(GapBuffer* gb) { /* TODO: walk from 0 to cursor.pos counting newlines for line, chars for col */ }
+
+void gb_update_cursor_linecol(GapBuffer* gb)
+{
+        int line = 0;
+        int col = 0;
+
+        for (int i = 0; i < gb->cursor.pos; i++)
+        {
+                if (gb_get_char_at(gb, i) == '\n')
+                {
+                        line++;
+                        col = 0;
+                }
+                else
+                        col++;
+        }
+
+        gb->cursor.line = line;
+        gb->cursor.col = col;
+}
+
 void gb_insert_char(GapBuffer* gb, char c)
 {
-  /* TODO: grow if needed, move gap, write char, advance gap_start and cursor */
-  if(gb_get_gap_size(gb)==0)
-    {
-      gb_grow(gb);
-    }
+        if (gb_get_gap_size(gb) == 0)
+        {
+                gb_grow(gb);
+        }
 
-  gb_move_gap(gb);
-  gb->buffer[gb->gap_start] = c;
-  gb->gap_start++;
-  gb->cursor.pos++;
+        gb_move_gap(gb);
+        gb->buffer[gb->gap_start] = c;
+        gb->gap_start++;
+        gb->cursor.pos++;
 
-    if (c == '\n')
-    {
-        gb->cursor.line++;
-        gb->cursor.col = 0;
-    }
-    else gb->cursor.col++;
-
+        if (c == '\n')
+        {
+                gb->cursor.line++;
+                gb->cursor.col = 0;
+        }
+        else
+                gb->cursor.col++;
 }
-void gb_insert_string(GapBuffer* gb, const char* s, int n) { /* TODO: call gb_insert_char for each character */ }
-void gb_delete_before(GapBuffer* gb) { /* TODO: move gap, retreat gap_start, decrement cursor.pos, update linecol */ }
-void gb_delete_after(GapBuffer* gb) { /* TODO: move gap, advance gap_end, update linecol */ }
-void gb_delete_range(GapBuffer* gb, int from, int to) { /* TODO: cursor to from, move gap, advance gap_end by range size */ }
+
+void gb_insert_string(GapBuffer* gb, const char* s, int n) {}
+
+void gb_delete_before(GapBuffer* gb)
+{
+        if (gb->cursor.pos == 0) return;
+        gb_move_gap(gb);
+        gb->gap_start--;
+        gb->cursor.pos--;
+        gb_update_cursor_linecol(gb);
+}
+
+void gb_delete_after(GapBuffer* gb) {}
+void gb_delete_range(GapBuffer* gb, int from, int to) {}
 
 // ============================================================
-// CURSOR MOVEMENT STUBS
+// CURSOR MOVEMENT
 // ============================================================
 
-void gb_cursor_left(GapBuffer* gb) { /* TODO: decrement cursor.pos, update linecol */ }
-void gb_cursor_right(GapBuffer* gb) { /* TODO: increment cursor.pos, update linecol */ }
-void gb_cursor_up(GapBuffer* gb) { /* TODO: walk back to prev line, land on same col */ }
-void gb_cursor_down(GapBuffer* gb) { /* TODO: walk forward to next line, land on same col */ }
-void gb_cursor_line_start(GapBuffer* gb) { /* TODO: walk back to start of current line */ }
-void gb_cursor_line_end(GapBuffer* gb) { /* TODO: walk forward to end of current line */ }
-void gb_cursor_to(GapBuffer* gb, int pos) { /* TODO: clamp pos, set cursor.pos, update linecol */ }
+void gb_cursor_left(GapBuffer* gb)
+{
+        if (gb->cursor.pos == 0) return;
+        gb->cursor.pos--;
+        gb_update_cursor_linecol(gb);
+}
+
+void gb_cursor_right(GapBuffer* gb)
+{
+        if (gb->cursor.pos == gb_get_length(gb)) return;
+        gb->cursor.pos++;
+        gb_update_cursor_linecol(gb);
+}
+
+void gb_cursor_up(GapBuffer* gb) {}
+void gb_cursor_down(GapBuffer* gb) {}
+void gb_cursor_line_start(GapBuffer* gb) {}
+void gb_cursor_line_end(GapBuffer* gb) {}
+void gb_cursor_to(GapBuffer* gb, int pos) {}
 
 // ============================================================
 // INPUT HANDLERS STUBS
 // ============================================================
 
+typedef struct
+{
+        float holdTimer;
+        float repeatTimer;
+} KeyRepeat;
+
+bool KeyRepeatUpdate(KeyRepeat* kr, int key, float delay, float rate)
+{
+        if (IsKeyPressed(key))
+        {
+                kr->holdTimer = 0.0f;
+                kr->repeatTimer = 0.0f;
+                return true;
+        }
+
+        if (IsKeyDown(key))
+        {
+                kr->holdTimer += GetFrameTime();
+
+                if (kr->holdTimer >= delay)
+                {
+                        kr->repeatTimer += GetFrameTime();
+
+                        if (kr->repeatTimer >= rate)
+                        {
+                                kr->repeatTimer = 0.0f;
+                                return true;
+                        }
+                }
+        }
+        else
+        {
+                kr->holdTimer = 0.0f;
+                kr->repeatTimer = 0.0f;
+        }
+
+        return false;
+}
+
+void handle_key_repeat(KeyRepeat* kr, int key,
+                       float delay, float rate,
+                       void (*action)(GapBuffer*),
+                       GapBuffer* gb)
+{
+        if (KeyRepeatUpdate(kr, key, delay, rate))
+        {
+                action(gb);
+        }
+}
+
 void handle_char_input(GapBuffer* gb)
 {
-        // TODO: GetCharPressed loop, insert printable chars
-        // TODO: KEY_ENTER inserts '\n'
-        // TODO: KEY_TAB inserts TAB_WIDTH spaces
+        int ch = GetCharPressed();
+        while (ch > 0)
+        {
+                if (ch >= 32 && ch <= 125)
+                        gb_insert_char(gb, (char)ch);
+                ch = GetCharPressed();
+        }
+
+        if (IsKeyPressed(KEY_ENTER))
+                gb_insert_char(gb, '\n');
+
+        if (IsKeyPressed(KEY_TAB))
+                gb_insert_string(gb, "    ", TAB_WIDTH);
 }
 
-void handle_arrow_keys(GapBuffer* gb)
+void handle_arrow_keys(GapBuffer* gb,
+                       KeyRepeat* left,
+                       KeyRepeat* right,
+                       KeyRepeat* up,
+                       KeyRepeat* down,
+                       float delay,
+                       float rate)
 {
-        // TODO: KEY_LEFT  -> gb_cursor_left
-        // TODO: KEY_RIGHT -> gb_cursor_right
-        // TODO: KEY_UP    -> gb_cursor_up
-        // TODO: KEY_DOWN  -> gb_cursor_down
-        // TODO: KEY_HOME  -> gb_cursor_line_start
-        // TODO: KEY_END   -> gb_cursor_line_end
+        handle_key_repeat(left, KEY_LEFT, delay, rate, gb_cursor_left, gb);
+        handle_key_repeat(right, KEY_RIGHT, delay, rate, gb_cursor_right, gb);
+        handle_key_repeat(up, KEY_UP, delay, rate, gb_cursor_up, gb);
+        handle_key_repeat(down, KEY_DOWN, delay, rate, gb_cursor_down, gb);
 }
 
-void handle_backspace(GapBuffer* gb, float* hold_timer, float* last_delete,
-                      float hold_delay, float hold_repeat)
+void handle_backspace(GapBuffer* gb,
+                      KeyRepeat* kr,
+                      float delay,
+                      float rate)
 {
-        // TODO: IsKeyPressed -> delete once, reset timers
-        // TODO: IsKeyDown    -> accumulate hold_timer, repeat delete at hold_repeat interval after hold_delay
+        handle_key_repeat(kr, KEY_BACKSPACE, delay, rate, gb_delete_before, gb);
 }
 
 // ============================================================
@@ -201,22 +322,47 @@ void draw_editor(GapBuffer* gb, Rectangle box, int frame)
         DrawRectangleRec(box, BLACK);
         DrawRectangleLinesEx(box, 1, RED);
 
-        // TODO: walk text, split on newlines, DrawText each line with LINE_HEIGHT spacing
+        int x = (int)box.x + 8;
+        int y = (int)box.y + 8;
+        int start = 0;
+        int length = gb_get_length(gb);
 
-        // TODO: cursor blink using (frame / 20) % 2
-        //       measure text up to cursor.col on current line to get x position
-        //       cursor.line * LINE_HEIGHT to get y position
-        //       DrawRectangle 2px wide FONT_SIZE tall in GOLD
+        for (int i = 0; i <= length; i++)
+        {
+                if (text[i] == '\n' || text[i] == '\0')
+                {
+                        char line[MAX_CHARS + 1];
+                        int line_len = i - start;
+                        memcpy(line, text + start, line_len);
+                        line[line_len] = '\0';
+                        DrawText(line, x, y, FONT_SIZE, RAYWHITE);
+                        y += LINE_HEIGHT;
+                        start = i + 1;
+                }
+        }
 
-        // status bar
+        if ((frame / 20) % 2 == 0)
+        {
+                char line_slice[MAX_CHARS + 1];
+                int line_start = gb->cursor.pos - gb->cursor.col;
+                int col = gb->cursor.col;
+
+                for (int i = 0; i < col; i++)
+                        line_slice[i] = gb_get_char_at(gb, line_start + i);
+                line_slice[col] = '\0';
+
+                int cursor_x = (int)box.x + 8 + MeasureText(line_slice, FONT_SIZE);
+                int cursor_y = (int)box.y + 8 + gb->cursor.line * LINE_HEIGHT;
+                DrawRectangle(cursor_x, cursor_y, 2, FONT_SIZE, GOLD);
+        }
+
         DrawText(
                 TextFormat("Ln %d  Col %d  chars: %d",
                            gb->cursor.line + 1,
                            gb->cursor.col + 1,
-                           gb_length(gb)),
+                           gb_get_length(gb)),
                 10, SCREEN_H - 24, 20, DARKGRAY);
 
-        // debug bar
         DrawText(
                 TextFormat("DEBUG: gap[%d, %d]  cursor.pos: %d",
                            gb->gap_start,
@@ -246,16 +392,17 @@ int main(void)
         Rectangle box = {0, 0, SCREEN_W, SCREEN_H};
 
         int frame = 0;
-        float hold_timer = 0.0f;
-        float last_delete = 0.0f;
-        float hold_delay = 0.4f;
-        float hold_repeat = 0.05f;
 
+        KeyRepeat left = {0}, right = {0}, up = {0}, down = {0};
+        KeyRepeat backspace = {0};
+
+        float delay = 0.2f;
+        float rate = 0.03f;
         while (!WindowShouldClose())
         {
                 handle_char_input(gb);
-                handle_arrow_keys(gb);
-                handle_backspace(gb, &hold_timer, &last_delete, hold_delay, hold_repeat);
+                handle_arrow_keys(gb, &left, &right, &up, &down, delay, rate);
+                handle_backspace(gb, &backspace, delay, rate);
                 draw_editor(gb, box, frame);
                 frame++;
         }
