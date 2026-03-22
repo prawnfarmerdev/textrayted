@@ -7,14 +7,14 @@
 // CONSTANTS
 // ============================================================
 
-#define SCREEN_W    1600       // Window width in pixels
-#define SCREEN_H    900        // Window height in pixels
-#define FONT_SIZE   40         // Font size used for rendering text
-#define LINE_HEIGHT 48         // Vertical spacing between lines (font size + padding)
-#define TAB_WIDTH   8          // Number of spaces inserted per Tab keypress
-#define INIT_GAP_SIZE 128      // Initial size of the gap buffer in bytes
-#define MAX_CHARS   4096       // Max characters that can be rendered at once
-#define GAP_GROW_SIZE 64       // How many bytes to add when the gap is exhausted
+#define SCREEN_W 1600 // Window width in pixels
+#define SCREEN_H 900 // Window height in pixels
+#define FONT_SIZE 40 // Font size used for rendering text
+#define LINE_HEIGHT 48 // Vertical spacing between lines (font size + padding)
+#define TAB_WIDTH 8 // Number of spaces inserted per Tab keypress
+#define INIT_GAP_SIZE 128 // Initial size of the gap buffer in bytes
+#define MAX_CHARS 4096 // Max characters that can be rendered at once
+#define GAP_GROW_SIZE 64 // How many bytes to add when the gap is exhausted
 
 // ============================================================
 // TYPES
@@ -23,9 +23,9 @@
 // Tracks the logical position of the text cursor, along with
 // its computed line and column (used for display and movement).
 typedef struct {
-	int pos;   // Absolute character index in the logical text
-	int line;  // Zero-based line number
-	int col;   // Zero-based column number within the current line
+	int pos; // Absolute character index in the logical text
+	int line; // Zero-based line number
+	int col; // Zero-based column number within the current line
 } Cursor;
 
 // A gap buffer is a classic data structure for text editing.
@@ -34,11 +34,11 @@ typedef struct {
 // Inserting at the cursor is O(1) as long as the gap is already there;
 // moving the gap requires a memmove proportional to the distance moved.
 typedef struct {
-	char *buffer;   // Raw backing array (size bytes total)
-	int gap_start;  // First byte of the gap (exclusive end of left text)
-	int gap_end;    // First byte after the gap (start of right text)
-	int size;       // Total allocated bytes (text + gap)
-	Cursor cursor;  // Current cursor state
+	char *buffer; // Raw backing array (size bytes total)
+	int gap_start; // First byte of the gap (exclusive end of left text)
+	int gap_end; // First byte after the gap (start of right text)
+	int size; // Total allocated bytes (text + gap)
+	Cursor cursor; // Current cursor state
 } GapBuffer;
 
 // ============================================================
@@ -219,9 +219,8 @@ void gb_insert_char(GapBuffer *gb, char c)
 // Used for multi-character insertions such as Tab expansion.
 void gb_insert_string(GapBuffer *gb, const char *str, int len)
 {
-        for (int i = 0; i < len; i++)
-                gb_insert_char(gb, str[i]);
-
+	for (int i = 0; i < len; i++)
+		gb_insert_char(gb, str[i]);
 }
 
 // ============================================================
@@ -281,35 +280,37 @@ void gb_cursor_right(GapBuffer *gb)
 //   3. Walk forward up to target_col (or the end of that line).
 void gb_cursor_up(GapBuffer *gb)
 {
-        if (gb->cursor.line == 0) return;
+	if (gb->cursor.line == 0)
+		return;
 
-        int target_line = gb->cursor.line - 1;
-        int target_col = gb->cursor.col;
+	int target_line = gb->cursor.line - 1;
+	int target_col = gb->cursor.col;
 
-        // walk back to find start of current line
-        int pos = gb->cursor.pos;
-        while (pos > 0 && gb_get_char_at(gb, pos - 1) != '\n') pos--;
-        // pos is now at start of current line
+	// walk back to find start of current line
+	int pos = gb->cursor.pos;
+	while (pos > 0 && gb_get_char_at(gb, pos - 1) != '\n')
+		pos--;
+	// pos is now at start of current line
 
-        // walk back one more to get past the newline
-        if (pos > 0) pos--;
+	// walk back one more to get past the newline
+	if (pos > 0)
+		pos--;
 
-        // walk back to find start of target line
-        while (pos > 0 && gb_get_char_at(gb, pos - 1) != '\n') pos--;
-        // pos is now at start of target line
+	// walk back to find start of target line
+	while (pos > 0 && gb_get_char_at(gb, pos - 1) != '\n')
+		pos--;
+	// pos is now at start of target line
 
-        // walk forward up to target_col or until newline
-        int col = 0;
-        while (col < target_col &&
-               pos < gb_get_length(gb) &&
-               gb_get_char_at(gb, pos) != '\n')
-        {
-                pos++;
-                col++;
-        }
+	// walk forward up to target_col or until newline
+	int col = 0;
+	while (col < target_col && pos < gb_get_length(gb) &&
+	       gb_get_char_at(gb, pos) != '\n') {
+		pos++;
+		col++;
+	}
 
-        gb->cursor.pos = pos;
-        gb_update_cursor_linecol(gb);
+	gb->cursor.pos = pos;
+	gb_update_cursor_linecol(gb);
 }
 
 // Moves the cursor down one line, trying to preserve the current column.
@@ -319,31 +320,30 @@ void gb_cursor_up(GapBuffer *gb)
 //   3. Walk forward up to target_col (or the end of that line).
 void gb_cursor_down(GapBuffer *gb)
 {
-        int target_col = gb->cursor.col;
+	int target_col = gb->cursor.col;
 
-        // walk forward to find the next newline
-        int pos = gb->cursor.pos;
-        while (pos < gb_get_length(gb) && gb_get_char_at(gb, pos) != '\n') pos++;
+	// walk forward to find the next newline
+	int pos = gb->cursor.pos;
+	while (pos < gb_get_length(gb) && gb_get_char_at(gb, pos) != '\n')
+		pos++;
 
-        // if no newline found, already on last line
-        if (pos >= gb_get_length(gb)) return;
+	// if no newline found, already on last line
+	if (pos >= gb_get_length(gb))
+		return;
 
-        // step past the newline
-        pos++;
+	// step past the newline
+	pos++;
 
-        // walk forward up to target_col or until next newline
-        int col = 0;
-        while (col < target_col &&
-               pos < gb_get_length(gb) &&
-               gb_get_char_at(gb, pos) != '\n')
-        {
-                pos++;
-                col++;
-        }
+	// walk forward up to target_col or until next newline
+	int col = 0;
+	while (col < target_col && pos < gb_get_length(gb) &&
+	       gb_get_char_at(gb, pos) != '\n') {
+		pos++;
+		col++;
+	}
 
-        gb->cursor.pos = pos;
-        gb_update_cursor_linecol(gb);
-
+	gb->cursor.pos = pos;
+	gb_update_cursor_linecol(gb);
 }
 
 // TODO: Jump the cursor to the first character of the current line (Home key).
@@ -368,8 +368,8 @@ void gb_cursor_to(GapBuffer *gb, int pos)
 // State for a single repeating key.  Hold the key briefly (delay) before it
 // starts firing repeatedly at the given rate.  This mimics OS key-repeat behaviour.
 typedef struct {
-	float holdTimer;    // Seconds the key has been held so far
-	float repeatTimer;  // Accumulator used to fire repeated actions at `rate`
+	float holdTimer; // Seconds the key has been held so far
+	float repeatTimer; // Accumulator used to fire repeated actions at `rate`
 } KeyRepeat;
 
 // Returns true on the frame a key action should fire, either on initial press
@@ -438,10 +438,10 @@ void handle_char_input(GapBuffer *gb)
 void handle_arrow_keys(GapBuffer *gb, KeyRepeat *left, KeyRepeat *right,
 		       KeyRepeat *up, KeyRepeat *down, float delay, float rate)
 {
-	handle_key_repeat(left,  KEY_LEFT,  delay, rate, gb_cursor_left,  gb);
+	handle_key_repeat(left, KEY_LEFT, delay, rate, gb_cursor_left, gb);
 	handle_key_repeat(right, KEY_RIGHT, delay, rate, gb_cursor_right, gb);
-	handle_key_repeat(up,    KEY_UP,    delay, rate, gb_cursor_up,    gb);
-	handle_key_repeat(down,  KEY_DOWN,  delay, rate, gb_cursor_down,  gb);
+	handle_key_repeat(up, KEY_UP, delay, rate, gb_cursor_up, gb);
+	handle_key_repeat(down, KEY_DOWN, delay, rate, gb_cursor_down, gb);
 }
 
 // Polls the Backspace key and fires gb_delete_before with key-repeat support.
@@ -546,7 +546,7 @@ int main(void)
 
 	// delay: seconds before repeat starts; rate: seconds between repeat fires
 	float delay = 0.2f;
-	float rate  = 0.03f;
+	float rate = 0.03f;
 
 	while (!WindowShouldClose()) {
 		handle_char_input(gb);
