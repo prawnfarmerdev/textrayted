@@ -1,14 +1,15 @@
 CC = gcc
 CFLAGS = -Wall -g 
+LDFLAGS = -L/usr/local/lib64
 TARGET = main
 SOURCES = main.c
-LIBS = -lraylib -lm -ldl -lpthread
+LIBS = -lraylib -lX11 -lXrandr -lXinerama -lXi -lXcursor -lGL -lopenal -lrt -lm -ldl -lpthread
 
 run: $(TARGET)
 	./$(TARGET)
 
 $(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(SOURCES) $(LIBS)
 
 clean:
 	rm -f $(TARGET) *.o
